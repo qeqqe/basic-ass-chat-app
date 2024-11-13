@@ -1,10 +1,13 @@
 const express = require("express");
 const app = express();
+const http = require("http");
+const server = http.createServer(app);
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const ConnectDB = require("./MongoDB");
 const User = require("./models/User");
+const Message = require("./models/Messages");
 require("dotenv").config();
 const JWT_SECRET = process.env.JWT_SECRET;
 app.use(
@@ -12,11 +15,22 @@ app.use(
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Internal Server Error",
+    error: err.message,
+  });
+});
+
 app.use(express.json());
 ConnectDB();
+
 const verify = (req, res, next) => {
   try {
     if (!req.headers.authorization) {
@@ -60,6 +74,50 @@ const verify = (req, res, next) => {
     });
   }
 };
+
+app.get("/messages", verify, async (req, res) => {
+  try {
+    const messages = await Message.find().sort({ createdAt: -1 }).limit(50);
+    res.status(200).json({
+      success: true,
+      data: messages.reverse(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching messages",
+      error: error.message,
+    });
+  }
+});
+
+app.post("/new-message", verify, async (req, res) => {
+  const { content } = req.body;
+  const { id, username } = req.user;
+
+  try {
+    const newMessage = new Message({
+      sender: id,
+      username,
+      content,
+      createdAt: new Date(),
+    });
+
+    const savedMessage = await newMessage.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Message sent successfully",
+      data: savedMessage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error during message sending",
+      error: error.message,
+    });
+  }
+});
 
 app.post("/register", async (req, res) => {
   try {
@@ -164,6 +222,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.listen(3001, () => {
+server.listen(3001, () => {
   console.log("Server running on port 3001");
 });
