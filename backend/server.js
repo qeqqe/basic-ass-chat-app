@@ -2,6 +2,13 @@ const express = require("express");
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
+});
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -104,6 +111,8 @@ app.post("/new-message", verify, async (req, res) => {
     });
 
     const savedMessage = await newMessage.save();
+
+    io.emit("newMessage", savedMessage);
 
     res.status(201).json({
       success: true,
@@ -220,6 +229,13 @@ app.post("/login", async (req, res) => {
       error: error.message,
     });
   }
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
 });
 
 server.listen(3001, () => {
