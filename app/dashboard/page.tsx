@@ -128,7 +128,7 @@ export default function Dashboard() {
                 >
                   <span className="text-xs text-gray-400">{msg.username}</span>
                   <div
-                    className={`mt-1 px-4 py-2 rounded-md ${
+                    className={`mt-1 px-4 py-2 rounded-md max-w-[80%] break-words ${
                       msg.username === user?.username
                         ? "bg-gradient-to-r from-indigo-600 to-blue-500"
                         : "bg-black/50 border border-white/10"
